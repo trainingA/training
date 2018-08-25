@@ -1,0 +1,32 @@
+#Iptables Tasks
+
+#!/bin/bash
+#iptables script 1
+# execute just from root 
+echo "$(whoami)"
+[ "$UID" -eq 0 ] || exec sudo "$0" "$@"
+#reset firwall
+iptables -F
+iptables -X
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
+iptables -P INPUT ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD ACCEPT
+# Allow the next packets on the Port 5000 on the eth1
+iptables -A INPUT -i eth1 -p tcp --dport 5000 -j ACCEPT
+iptables -A INPUT -i eth1 -p udp --dport 5000 -j ACCEPT
+# drop IP addresses on eth1 and log its 
+iptables -N LOGANDDROP
+iptables -A INPUT -s 10.10.10.0/24 -j LOGANDDROP
+iptables -A LOGANDDROP -m limit --limit 3/min -j LOG --log-prefix "iptables dropped packets " --log-level 7
+iptables -A LOGANDDROP -j DROP
+# allow for ip address
+iptables -A INPUT -i eth1 -s 10.10.10.10 -j ACCEPT
+# allow for 5/minutes icmp packets 
+iptables -A INPUT -i eth1 -p icmp -m hashlimit --hashlimit-name icmp --hashlimit 5/minute  -j ACCEPT
+# drop all traffic 
+iptables -A INPUT -i eth1 -j DROP
+
